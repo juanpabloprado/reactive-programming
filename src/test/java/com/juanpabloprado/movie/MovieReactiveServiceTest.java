@@ -1,7 +1,6 @@
 package com.juanpabloprado.movie;
 
 import com.juanpabloprado.domain.Movie;
-import com.juanpabloprado.review.ReviewService;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
