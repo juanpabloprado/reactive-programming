@@ -1,5 +1,7 @@
 package com.juanpabloprado.flux;
 
+import com.juanpabloprado.exception.ReactorException;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -7,6 +9,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
 
+@Slf4j
 public class FluxAndMonoGeneratorService {
     public Flux<String> namesFlux() {
         return Flux.fromIterable(List.of("Juan", "Pablo", "Alex")).log(); // db or a remote service call
@@ -204,6 +207,105 @@ public class FluxAndMonoGeneratorService {
         var bMono = Mono.just("B").delayElement(Duration.ofMillis(125));
 
         return aMono.zipWith(bMono, (s, s2) -> s + s2).log();
+    }
+
+    public Flux<String> exceptionFlux() {
+        return Flux.just("A", "B", "C")
+                .concatWith(Flux.error(new RuntimeException("Exception occurred")))
+                .concatWith(Flux.just("D"));
+    }
+
+    public Flux<String> exploreOnErrorReturn() {
+        return Flux.just("A", "B", "C")
+                .concatWith(Flux.error(new IllegalStateException("Exception occurred")))
+                .onErrorReturn("D");
+    }
+
+    public Flux<String> exploreOnErrorResume(Exception e) {
+
+        var recoveryFlux = Flux.just("D", "E", "F");
+
+        return Flux.just("A", "B", "C")
+                .concatWith(Flux.error(e))
+                .onErrorResume(t -> {
+                    log.error("Exception is: " + t);
+                    if (t instanceof IllegalStateException) {
+                        return recoveryFlux;
+                    } else {
+                        return Flux.error(t);
+                    }
+                });
+    }
+
+    public Flux<String> exploreOnErrorContinue() {
+
+        return Flux.just("A", "B", "C")
+                .map(name -> {
+                    if (name.equals("B")) {
+                        throw new IllegalStateException();
+                    }
+                    return name;
+                })
+                .concatWith(Flux.just("D"))
+                .onErrorContinue((t, name) -> {
+                    log.error("Exception is: " + t);
+                    log.info("name is: {}", name);
+                });
+    }
+
+    public Flux<String> exploreOnErrorMap() {
+
+        return Flux.just("A", "B", "C")
+                .map(name -> {
+                    if (name.equals("B")) {
+                        throw new IllegalStateException();
+                    }
+                    return name;
+                })
+                .concatWith(Flux.just("D"))
+                .onErrorMap((t) -> {
+                    log.error("Exception is: " + t);
+                    return new ReactorException(t, t.getMessage());
+                });
+    }
+
+    public Flux<String> exploreDoOnError() {
+        return Flux.just("A", "B", "C")
+                .concatWith(Flux.error(new IllegalStateException("Exception occurred")))
+                .doOnError(t -> log.error("Exception is: " + t));
+    }
+
+    public Mono<Object> exploreMonoOnErrorReturn() {
+        return Mono.just("A")
+                .map(s -> {
+                    throw new RuntimeException("Exception occurred");
+                })
+                .onErrorReturn("abc");
+    }
+
+    public Mono<Object> exploreMonoOnErrorMap() {
+        return Mono.just("B")
+                .map(name -> {
+                    throw new IllegalStateException();
+                }).onErrorMap((t) -> {
+                    log.error("Exception is: " + t);
+                    return new ReactorException(t, t.getMessage());
+                });
+    }
+
+    public Mono<String> exploreMonoOnErrorContinue(String value) {
+
+        return Mono.just(value)
+                .map(name -> {
+                    if (name.equals("abc")) {
+                        throw new RuntimeException();
+                    }
+                    return name;
+                })
+                .onErrorContinue((t, name) -> {
+                    log.error("Exception is: " + t);
+                    log.info("name is: {}", name);
+                });
     }
 
     public Flux<String> splitString(String name) {
