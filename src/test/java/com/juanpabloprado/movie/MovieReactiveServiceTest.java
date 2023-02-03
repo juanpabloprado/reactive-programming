@@ -1,7 +1,6 @@
 package com.juanpabloprado.movie;
 
 import com.juanpabloprado.domain.Movie;
-import com.juanpabloprado.revenue.RevenueService;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
@@ -13,8 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @MicronautTest
 class MovieReactiveServiceTest {
-    @Inject
-    private RevenueService revenueService;
     @Inject
     private MovieReactiveService movieReactiveService;
 
