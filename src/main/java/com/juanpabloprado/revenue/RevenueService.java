@@ -8,7 +8,6 @@ import static com.juanpabloprado.util.CommonUtil.delay;
 
 @Singleton
 public class RevenueService {
-
     public Revenue getRevenue(Long movieId){
         delay(1000); // simulating a network call ( DB or Rest call)
         return Revenue.builder()

@@ -6,12 +6,14 @@ import com.juanpabloprado.domain.Review;
 import com.juanpabloprado.exception.MovieException;
 import com.juanpabloprado.exception.NetworkException;
 import com.juanpabloprado.exception.ServiceException;
+import com.juanpabloprado.revenue.RevenueService;
 import com.juanpabloprado.review.ReviewService;
 import jakarta.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 import reactor.util.retry.RetryBackoffSpec;
 
@@ -24,10 +26,13 @@ public class MovieReactiveService {
 
     private final MovieInfoService movieInfoService;
     private final ReviewService reviewService;
+    private final RevenueService revenueService;
 
-    public MovieReactiveService(MovieInfoService movieInfoService, ReviewService reviewService) {
+
+    public MovieReactiveService(MovieInfoService movieInfoService, ReviewService reviewService, RevenueService revenueService) {
         this.movieInfoService = movieInfoService;
         this.reviewService = reviewService;
+        this.revenueService = revenueService;
     }
 
     public Flux<Movie> getAllMovies() {
@@ -79,12 +84,27 @@ public class MovieReactiveService {
                 });
     }
 
-    public Mono<Movie> getMovieById(Long movieId) {
+    public Mono<Movie> getMovieById(long movieId) {
 
         var movieInfoMono = movieInfoService.retrieveMovieInfoById(movieId);
         var reviewsFlux = reviewService.retrieveReviews(movieId).collectList();
 
         return movieInfoMono.zipWith(reviewsFlux, Movie::new);
+    }
+
+    public Mono<Movie> getMovieByIdWithRevenue(long movieId) {
+
+        var movieInfoMono = movieInfoService.retrieveMovieInfoById(movieId);
+        var reviewsFlux = reviewService.retrieveReviews(movieId).collectList();
+
+        var revenueMono = Mono.fromCallable(() -> revenueService.getRevenue(movieId))
+                .subscribeOn(Schedulers.boundedElastic());
+
+        return movieInfoMono.zipWith(reviewsFlux, Movie::new)
+                .zipWith(revenueMono, (movie, revenue) -> {
+                    movie.setRevenue(revenue);
+                    return movie;
+                });
     }
 
     public Mono<Movie> getMovieByIdUsingFlatMap(long movieId) {
