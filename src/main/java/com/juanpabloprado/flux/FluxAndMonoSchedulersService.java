@@ -15,7 +15,7 @@ import static com.juanpabloprado.util.CommonUtil.delay;
 public class FluxAndMonoSchedulersService {
 
     static List<String> namesList = List.of("alex", "ben", "chloe");
-    static List<String> namesList1 = List.of("adam", "jill", "jack");
+    static List<String> namesList2 = List.of("adam", "jill", "jack");
 
     public Flux<String> explorePublishOn() {
 
@@ -23,7 +23,7 @@ public class FluxAndMonoSchedulersService {
                 .publishOn(Schedulers.parallel())
                 .map(this::upperCase);
 
-        var namesFlux1 = Flux.fromIterable(namesList1)
+        var namesFlux1 = Flux.fromIterable(namesList2)
                 .publishOn(Schedulers.boundedElastic())
                 .map(this::upperCase)
                 .map((s) -> {
@@ -36,80 +36,58 @@ public class FluxAndMonoSchedulersService {
 
     public ParallelFlux<String> exploreParallel() {
 
-        log.info("no of cores : {}", Runtime.getRuntime().availableProcessors());
+        log.info("No of cores: {}", Runtime.getRuntime().availableProcessors());
 
-        var namesFlux = Flux.fromIterable(namesList)
+        return Flux.fromIterable(namesList)
                 .parallel()
                 .runOn(Schedulers.parallel())
-                .map(this::upperCase)
-                .log();
-
-        return namesFlux;
+                .map(this::upperCase);
     }
 
-    public Flux<String> explore_parallel_usingFlatMap() {
+    public Flux<String> exploreParallelUsingFlatMap() {
+
+        return Flux.fromIterable(namesList)
+                .flatMap(name -> Mono.just(name)
+                        .map(this::upperCase)
+                        .subscribeOn(Schedulers.parallel()));
+    }
+
+    public Flux<String> exploreParallelUsingFlatMap2() {
 
         var namesFlux = Flux.fromIterable(namesList)
                 .flatMap(name -> Mono.just(name)
                         .map(this::upperCase)
-                        .subscribeOn(Schedulers.parallel()))
-                        .log();
+                        .subscribeOn(Schedulers.parallel()));
 
-        return namesFlux;
-    }
-
-    public Flux<String> explore_parallel_usingFlatMap_1() {
-        // start without publish on
-        // add publishon Schedulers.parallel()
-        // add publishon Schedulers.boundedElastic() for the second flux
-
-        var namesFlux = Flux.fromIterable(namesList)
-                .flatMap(name -> Mono.just(name)
-                        .map(this::upperCase)
-                        .subscribeOn(Schedulers.parallel()))
-                .log();
-
-        var namesFlux1 = Flux.fromIterable(namesList1)
+        var namesFlux2 = Flux.fromIterable(namesList2)
                 .flatMap(name -> Mono.just(name)
                         .map(this::upperCase)
                         .subscribeOn(Schedulers.parallel()))
                 .map((s) -> {
-                    log.info("Value of s is {}", s);
+                    log.info("Name is: {}", s);
                     return s;
-                })
-                .log();
+                });
 
-        return namesFlux.mergeWith(namesFlux1);
+        return namesFlux.mergeWith(namesFlux2);
     }
 
-    public Flux<String> explore_parallel_usingFlatMapSequential() {
+    public Flux<String> exploreParallelUsingFlatMapSequential() {
 
-        var namesFlux = Flux.fromIterable(namesList)
-                .flatMapSequential(name -> {
-                    return Mono.just(name)
-                            .map(this::upperCase)
-                            .subscribeOn(Schedulers.parallel());
-
-                })
-                .log();
-
-        return namesFlux;
+        return Flux.fromIterable(namesList)
+                .flatMapSequential(name -> Mono.just(name)
+                        .map(this::upperCase)
+                        .subscribeOn(Schedulers.parallel()));
     }
-
 
 
     public ParallelFlux<String> explore_parallel_1() {
-        // start without publish on
-        // add publishon Schedulers.parallel()
-        // add publishon Schedulers.boundedElastic() for the second flux
-
 
         var namesFlux = Flux.fromIterable(namesList)
                 .publishOn(Schedulers.parallel())
                 .map(this::upperCase)
                 .log();
 
-        var namesFlux1 = Flux.fromIterable(namesList1)
+        var namesFlux1 = Flux.fromIterable(namesList2)
                 .publishOn(Schedulers.boundedElastic())
                 .map(this::upperCase)
                 .map((s) -> {
@@ -182,7 +160,7 @@ public class FluxAndMonoSchedulersService {
     }
 
     private Flux<String> secondFlux() {
-        return Flux.fromIterable(namesList1)
+        return Flux.fromIterable(namesList2)
                 .map(this::upperCase);
     }
 
